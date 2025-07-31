@@ -7,7 +7,7 @@ export default function Chatbot() {
   const [messages, setMessages] = useState([
     { 
       id: 1, 
-      text: "Hi! I'm here to help you with scheduling appointments, pricing information, and answering any questions. How can I assist you today?", 
+      text: "Hi! I'm an AI assistant here to help you learn about our lead capture chatbot service. I can answer questions about pricing, features, and help you get started. What would you like to know?", 
       sender: 'bot',
       timestamp: new Date()
     }
@@ -16,40 +16,20 @@ export default function Chatbot() {
   const [isTyping, setIsTyping] = useState(false);
 
   const quickActions = [
-    'Schedule Appointment',
-    'View Pricing',
-    'Customer Support',
-    'Learn More'
-  ];
+  'What makes your chatbots different?',
+  'Show me pricing and ROI',
+  'Schedule a demo',
+  'How quickly can I get started?'
+];
 
-  const handleQuickAction = (action) => {
+  const handleQuickAction = async (action) => {
     addMessage(action, 'user');
-    
-    setTimeout(() => {
-      let response = '';
-      switch(action) {
-        case 'Schedule Appointment':
-          response = "Great! I'd love to help you schedule an appointment. What's the best email to reach you at?";
-          break;
-        case 'View Pricing':
-          response = "Here are our pricing plans:\n\n💼 Starter: $49/month\n- 1 chatbot\n- 1,000 conversations\n- Basic analytics\n\n🚀 Professional: $149/month\n- 5 chatbots\n- 10,000 conversations\n- Advanced analytics\n\n⭐ Enterprise: $399/month\n- Unlimited chatbots\n- 100,000 conversations\n- White-label option\n\nWhich plan interests you most?";
-          break;
-        case 'Customer Support':
-          response = "I'm here to help! What specific question can I answer for you today?";
-          break;
-        case 'Learn More':
-          response = "Our AI chatbot helps businesses capture leads 24/7. It can schedule appointments, answer questions, and integrate with your existing tools. Would you like to see a demo?";
-          break;
-        default:
-          response = "How can I help you today?";
-      }
-      addMessage(response, 'bot');
-    }, 1000);
+    await getAIResponse(action);
   };
 
   const addMessage = (text, sender) => {
     const newMessage = {
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       text,
       sender,
       timestamp: new Date()
@@ -57,32 +37,44 @@ export default function Chatbot() {
     setMessages(prev => [...prev, newMessage]);
   };
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    
-    addMessage(input, 'user');
-    const currentInput = input;
-    setInput('');
+  const getAIResponse = async (message) => {
     setIsTyping(true);
     
-    setTimeout(() => {
-      setIsTyping(false);
-      
-      const lowerInput = currentInput.toLowerCase();
-      let response = '';
-      
-      if (lowerInput.includes('price') || lowerInput.includes('cost') || lowerInput.includes('pricing')) {
-        response = "I'd be happy to share our pricing! We have three main plans starting at $49/month. Would you like me to break down what's included in each plan?";
-      } else if (lowerInput.includes('schedule') || lowerInput.includes('appointment') || lowerInput.includes('meeting')) {
-        response = "Perfect! I can help you schedule an appointment. What's your preferred date and time? Also, what's the best email to send confirmation details?";
-      } else if (lowerInput.includes('demo') || lowerInput.includes('try')) {
-        response = "Great! You're actually using a demo right now. This chatbot can be customized for any business. Would you like to schedule a call to discuss how this could work for your company?";
-      } else {
-        response = `I understand you're asking about "${currentInput}". I'm here to help with appointments, pricing, and general questions. Is there something specific I can assist you with?`;
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          message: message,
+          businessInfo: {} // Can be expanded later
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
       }
+
+      const data = await response.json();
       
-      addMessage(response, 'bot');
-    }, 1500);
+      setIsTyping(false);
+      addMessage(data.response, 'bot');
+    } catch (error) {
+      setIsTyping(false);
+      addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+      console.error('Error:', error);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    
+    const userMessage = input;
+    addMessage(userMessage, 'user');
+    setInput('');
+    
+    await getAIResponse(userMessage);
   };
 
   const formatTime = (timestamp) => {
@@ -99,7 +91,7 @@ export default function Chatbot() {
           </div>
           <div>
             <h3 className="font-semibold text-lg">AI Assistant</h3>
-            <p className="text-xs text-blue-100">Always here to help</p>
+            <p className="text-xs text-blue-100">Powered by OpenAI</p>
           </div>
           <div className="ml-auto">
             <div className="w-3 h-3 bg-green-400 rounded-full"></div>
@@ -184,7 +176,7 @@ export default function Chatbot() {
           />
           <button
             onClick={sendMessage}
-            disabled={!input.trim()}
+            disabled={!input.trim() || isTyping}
             className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             <Send size={16} />
